@@ -1,0 +1,14 @@
+# files
+
+.env
+*.sqlite3
+
+
+# folders
+
+.coverage
+.idea/
+.pytest_cache/
+__pycache__/
+htmlcov/
+staticfiles/
