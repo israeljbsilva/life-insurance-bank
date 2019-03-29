@@ -242,7 +242,8 @@ default_headers = (
 
 # Storage - S3
 # ------------------------------------------------------------------------------
-STORAGE_BUCKET = env.str('STORAGE_BUCKET', default='cadun-core-dev')
-STORAGE_LOGIN = env.str('STORAGE_LOGIN', default='F3T98N2JHOJKZU64M6OE')
+STORAGE_BUCKET_NAME = env.str('STORAGE_BUCKET_NAME', default='cadun-core-dev')
+STORAGE_USERNAME = env.str('STORAGE_USERNAME', default='F3T98N2JHOJKZU64M6OE')
 STORAGE_PASSWORD = env.str('STORAGE_PASSWORD', default='uuG1DfuU74P3fznHYCGDr3iGn2FeIGvhPLqhdJq2')
+STORAGE_PREFIX_NAME = env.str('STORAGE_PREFIX_NAME', default='upload/')
 STORAGE_URL = env.str('STORAGE_URL', default='https://ceph-int.nexxera.com')

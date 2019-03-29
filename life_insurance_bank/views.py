@@ -1,5 +1,6 @@
 import os
 import io
+import base64
 import uuid
 import secrets
 import string
@@ -24,11 +25,10 @@ from rest_framework.mixins import CreateModelMixin, ListModelMixin, UpdateModelM
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
-from life_insurance_bank.serializers import BankSerializer, CompanySerializer
+from life_insurance_bank.serializers import BankSerializer, CompanySerializer, UploadFileSerializer
 from life_insurance_bank.models import BankModel, CompanyModel
 from life_insurance_bank.pagination import CompanyPagination
 from life_insurance_bank.services.storage import StorageService
-from life_insurance_bank.services.file import obtain_file_buffer, validate_file_buffer
 
 
 @csrf_exempt
@@ -125,37 +125,19 @@ class CompanyViewSet(BankViewSet, GenericViewSet, CreateModelMixin, ListModelMix
         serializer.save()
 
 
-class CompanyFileUploadView(ViewSet):
+class CompanyFileUploadView(GenericViewSet, CreateModelMixin):
 
-    parser_classes = (FileUploadParser, )
+    serializer_class = UploadFileSerializer
 
-    @swagger_auto_schema(
-        manual_parameters=[
-            Parameter('file', 'request_body', description='The file to upload.', required=True, type='file')
-        ]
-    )
-    def create(self, request, bank_pk=None, company_pk=None):
+    def create(self, request, bank_pk, company_pk):
+        base_64_file = request.data.get('base_64_file')
+
+        # test = base64.b64decode(bytes(base_64_file, "utf-8"))
         try:
             bank = BankModel.objects.get(id=bank_pk)
             company = CompanyModel.objects.get(id=company_pk, bank=bank)
-            storage_service = StorageService(
-                settings.STORAGE_URL,
-                settings.STORAGE_LOGIN,
-                settings.STORAGE_PASSWORD,
-                settings.STORAGE_BUCKET,
-                f'FILE_UPLOAD/{company.cnpj}'
-            )
+            key_storage = f'{bank.id}-{company.id}'
+            StorageService().upload(key=key_storage, buffer=base_64_file)
+            return Response(data=f'File {key_storage}-file.csv has been saved.')
         except CompanyModel.DoesNotExist as error:
             raise ValidationError(error)
-
-        csv_file = self._obtain_csv_file(request)
-        buffer = obtain_file_buffer(csv_file)
-        validate_file_buffer(buffer, ('text/plain',))
-        storage_service.upload(csv_file.name, io.BytesIO(buffer))
-
-    @staticmethod
-    def _obtain_csv_file(request):
-        try:
-            return request.FILES['file']
-        except Exception:
-            raise ValidationError('File not found.')

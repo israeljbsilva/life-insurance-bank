@@ -28,24 +28,3 @@ class CompanyModel(models.Model):
         db_table = 'COMPANY'
         verbose_name = 'company'
         verbose_name_plural = 'companies'
-
-
-'''class InvitedUserModel(models.Model):
-    social_security = models.CharField('social_security', primary_key=True, max_length=11, null=False)
-    code = models.CharField('code', null=False, max_length=6)
-
-    class Meta:
-        db_table = 'USER'
-        verbose_name = 'User'
-        verbose_name_plural = 'Users'
-
-
-class InvitedFriendsModel(models.Model):
-    id = models.AutoField(primary_key=True)
-    invited_user = models.ForeignKey(to=InvitedUserModel, on_delete=models.CASCADE)
-    social_security_friend = models.CharField('social_security_friend', max_length=11, null=False)
-
-    class Meta:
-        db_table = 'FRIENDS'
-        verbose_name = 'Friends'
-        verbose_name_plural = 'Friends' '''
