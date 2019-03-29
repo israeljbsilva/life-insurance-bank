@@ -20,7 +20,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.core.validators import validate_email
 
-from rest_framework.parsers import FileUploadParser
+from rest_framework.decorators import action
 from rest_framework.viewsets import GenericViewSet, ViewSet
 from rest_framework.mixins import CreateModelMixin, ListModelMixin, UpdateModelMixin, DestroyModelMixin
 from rest_framework.exceptions import ValidationError
@@ -165,6 +165,19 @@ class EmployeeViewSet(GenericViewSet, CreateModelMixin, ListModelMixin, DestroyM
             response['cpf'] = context[1].replace('\n', '')
             list_response.append(response)
         return Response(data=list_response)
+
+    def destroy(self, request, *args, **kwargs):
+        bank, company = self.get_queryset()
+        cpf = self.kwargs.get('pk')
+        file_data = urllib.request.urlopen(company.data_load)
+        datatowrite = file_data.readlines()
+        for index, employee in enumerate(datatowrite):
+            if cpf in employee.decode("utf-8"):
+                datatowrite.pop(index)
+        join_bytes = bytes('', encoding='utf-8').join(datatowrite)
+        base_64_file = base64.b64encode(join_bytes).decode("utf-8")
+        services.update_base_64_file(bank=bank, company=company, base_64_file=base_64_file)
+        return Response(data=f'{cpf} removed')
 
 
 class FileUploadViewSet(EmployeeViewSet, GenericViewSet, CreateModelMixin):
