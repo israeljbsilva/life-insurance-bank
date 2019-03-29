@@ -127,56 +127,53 @@ class CompanyViewSet(BankViewSet, GenericViewSet, CreateModelMixin, ListModelMix
         serializer.save()
 
 
-class FileUploadViewSet(GenericViewSet, CreateModelMixin):
-
-    serializer_class = UploadFileSerializer
-
-    def create(self, request, *args, **kwargs):
-        try:
-            bank = BankModel.objects.get(id=kwargs.get('bank_pk'))
-            company = CompanyModel.objects.get(id=kwargs.get('company_pk'), bank=bank)
-            base_64_file = request.data.get('base_64_file')
-            services.update_base_64_file(bank=bank, company=company, base_64_file=base_64_file)
-            return Response(data=f'File file.csv has been saved.')
-        except CompanyModel.DoesNotExist as error:
-            raise ValidationError(error)
-
-
 class EmployeeViewSet(GenericViewSet, CreateModelMixin, ListModelMixin, DestroyModelMixin):
 
     serializer_class = EmployeeSerializer
 
-    def create(self, request, *args, **kwargs):
+    def get_queryset(self):
         try:
-            bank = BankModel.objects.get(id=kwargs.get('bank_pk'))
-            company = CompanyModel.objects.get(id=kwargs.get('company_pk'), bank=bank)
-            name = request.data.get('name')
-            cpf = request.data.get('cpf')
-
-            list_insert = bytes(f'{name};{cpf}\n', encoding='utf-8')
-            file_data = urllib.request.urlopen(company.data_load)
-            datatowrite = file_data.read()
-            datatowrite += list_insert
-
-            base_64_file = base64.b64encode(datatowrite).decode("utf-8")
-            services.update_base_64_file(bank=bank, company=company, base_64_file=base_64_file)
+            bank = BankModel.objects.get(id=self.kwargs.get('bank_pk'))
+            company = CompanyModel.objects.get(id=self.kwargs.get('company_pk'), bank=bank)
+            return bank, company
         except CompanyModel.DoesNotExist as error:
             raise ValidationError(error)
+
+    def create(self, request, *args, **kwargs):
+        bank, company = self.get_queryset()
+        name = request.data.get('name')
+        cpf = request.data.get('cpf')
+
+        list_insert = bytes(f'{name};{cpf}\n', encoding='utf-8')
+        file_data = urllib.request.urlopen(company.data_load)
+        datatowrite = file_data.read()
+        datatowrite += list_insert
+
+        base_64_file = base64.b64encode(datatowrite).decode("utf-8")
+        services.update_base_64_file(bank=bank, company=company, base_64_file=base_64_file)
 
     def list(self, request, *args, **kwargs):
-        try:
-            bank = BankModel.objects.get(id=kwargs.get('bank_pk'))
-            company = CompanyModel.objects.get(id=kwargs.get('company_pk'), bank=bank)
-            list_response = []
-            file_data = urllib.request.urlopen(company.data_load)
-            datatowrite = file_data.readlines()
-            for employee in datatowrite:
-                response = {}
-                file_decode = employee.decode("utf-8")
-                context = file_decode.split(';')
-                response['name'] = context[0]
-                response['cpf'] = context[1].replace('\n', '')
-                list_response.append(response)
-            return Response(data=list_response)
-        except CompanyModel.DoesNotExist as error:
-            raise ValidationError(error)
+        _, company = self.get_queryset()
+        list_response = []
+        file_data = urllib.request.urlopen(company.data_load)
+        datatowrite = file_data.readlines()
+        for employee in datatowrite:
+            response = {}
+            file_decode = employee.decode("utf-8")
+            context = file_decode.split(';')
+            response['name'] = context[0]
+            response['cpf'] = context[1].replace('\n', '')
+            list_response.append(response)
+        return Response(data=list_response)
+
+
+class FileUploadViewSet(EmployeeViewSet, GenericViewSet, CreateModelMixin):
+
+    serializer_class = UploadFileSerializer
+    http_method_names = ['post']
+
+    def create(self, request, *args, **kwargs):
+        bank, company = self.get_queryset()
+        base_64_file = request.data.get('base_64_file')
+        services.update_base_64_file(bank=bank, company=company, base_64_file=base_64_file)
+        return Response(data=f'File file.csv has been saved.')
