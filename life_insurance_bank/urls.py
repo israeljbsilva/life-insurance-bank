@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework_nested import routers
-from life_insurance_bank.views import BankViewSet, CompanyViewSet, CompanyFileUploadView
+from life_insurance_bank.views import BankViewSet, CompanyViewSet, FileUploadViewSet, EmployeeViewSet
 
 
 app_name = 'life_insurance_bank'
@@ -13,12 +13,16 @@ companies_router = routers.NestedSimpleRouter(bank_router, r'bank', lookup='bank
 companies_router.register(r'company', CompanyViewSet, 'company')
 
 upload_router = routers.NestedSimpleRouter(companies_router, r'company', lookup='company', trailing_slash=False)
-upload_router.register(r'upload', CompanyFileUploadView, 'upload')
+upload_router.register(r'upload', FileUploadViewSet, 'upload')
+
+employee_router = routers.NestedSimpleRouter(companies_router, r'company', lookup='company', trailing_slash=False)
+employee_router.register(r'employee', EmployeeViewSet, 'employee')
 
 
 urlpatterns = (
     path('', include(bank_router.urls)),
     path('', include(upload_router.urls)),
     path('', include(companies_router.urls)),
+    path('', include(employee_router.urls)),
 
 )

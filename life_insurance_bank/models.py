@@ -21,6 +21,7 @@ class CompanyModel(models.Model):
     name = models.CharField(max_length=100, null=False)
     official_name = models.CharField(max_length=100, null=False)
     cnpj = models.BigIntegerField(null=False)
+    data_load = models.CharField(max_length=100)
     email = models.CharField(max_length=100, unique=True)
     password = models.CharField(max_length=50)
 

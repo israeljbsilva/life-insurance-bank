@@ -2,7 +2,7 @@ import base64
 import boto3
 
 from botocore.config import Config
-
+from io import IOBase
 from django.conf import settings
 
 
@@ -18,13 +18,17 @@ class StorageService:
                                    config=config)
 
     def upload(self, key: str, buffer: str):
+        complete_key = f'{settings.STORAGE_PREFIX_NAME}{key}-file.csv'
         bytes_file = bytes(buffer, encoding='utf-8')
         with open('file.csv', 'wb') as file:
             file.write(base64.decodebytes(bytes_file))
         with open('file.csv', 'rb') as file:
             self.client.upload_fileobj(
-                Bucket=self.bucket_name, Key=key, Fileobj=file, ExtraArgs={'ACL': 'public-read'})
-        return key, file
+                Bucket=self.bucket_name, Key=complete_key, Fileobj=file, ExtraArgs={'ACL': 'public-read'})
+
+    def download(self, key: str, buffer: IOBase):
+        complete_key = f'{settings.STORAGE_PREFIX_NAME}{key}-file.csv'
+        self.client.download_fileobj(Bucket=self.bucket_name, Key=complete_key, Fileobj=buffer)
 
     def delete(self, key: str):
         self.client.delete_object(Bucket=self.bucket_name, Key=key)
