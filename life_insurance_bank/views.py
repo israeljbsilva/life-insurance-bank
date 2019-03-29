@@ -1,5 +1,4 @@
 import os
-import io
 import base64
 import urllib
 import uuid
@@ -10,9 +9,6 @@ from http import HTTPStatus
 
 from pycpfcnpj import cpfcnpj
 
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg.openapi import Parameter
-
 from django.conf import settings
 from django.db.models import Q
 from django.http import JsonResponse
@@ -20,8 +16,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.core.validators import validate_email
 
-from rest_framework.decorators import action
-from rest_framework.viewsets import GenericViewSet, ViewSet
+from rest_framework.viewsets import GenericViewSet
 from rest_framework.mixins import CreateModelMixin, ListModelMixin, UpdateModelMixin, DestroyModelMixin
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -30,7 +25,6 @@ from life_insurance_bank.serializers import BankSerializer, CompanySerializer, U
 from life_insurance_bank.models import BankModel, CompanyModel
 from life_insurance_bank.pagination import CompanyPagination
 from life_insurance_bank.services.storage import StorageService
-from life_insurance_bank.services import services
 
 
 @csrf_exempt
@@ -44,6 +38,17 @@ def ping(request):
 def _generate_password():
     alphabet = string.ascii_letters + string.digits
     return ''.join(secrets.choice(alphabet) for index in range(20))
+
+
+def _update_base_64_file(bank, company, base_64_file):
+    key_storage = f'{bank.id}-{company.id}'
+    StorageService().upload(key=key_storage, buffer=base_64_file)
+    upload_file_full_url = f'{settings.STORAGE_URL}/{settings.STORAGE_BUCKET_NAME}/' \
+        f'{settings.STORAGE_PREFIX_NAME}{key_storage}-file.csv'
+    CompanyModel(
+        id=company.id, bank=bank, name=company.name, official_name=company.official_name,
+        cnpj=company.cnpj, data_load=upload_file_full_url, email=company.email,
+        password=company.password).save(force_update=True)
 
 
 class BankViewSet(GenericViewSet, CreateModelMixin, ListModelMixin, UpdateModelMixin, DestroyModelMixin):
@@ -150,7 +155,7 @@ class EmployeeViewSet(GenericViewSet, CreateModelMixin, ListModelMixin, DestroyM
         datatowrite += list_insert
 
         base_64_file = base64.b64encode(datatowrite).decode("utf-8")
-        services.update_base_64_file(bank=bank, company=company, base_64_file=base_64_file)
+        _update_base_64_file(bank=bank, company=company, base_64_file=base_64_file)
 
     def list(self, request, *args, **kwargs):
         _, company = self.get_queryset()
@@ -176,7 +181,7 @@ class EmployeeViewSet(GenericViewSet, CreateModelMixin, ListModelMixin, DestroyM
                 datatowrite.pop(index)
         join_bytes = bytes('', encoding='utf-8').join(datatowrite)
         base_64_file = base64.b64encode(join_bytes).decode("utf-8")
-        services.update_base_64_file(bank=bank, company=company, base_64_file=base_64_file)
+        _update_base_64_file(bank=bank, company=company, base_64_file=base_64_file)
         return Response(data=f'{cpf} removed')
 
 
@@ -188,5 +193,5 @@ class FileUploadViewSet(EmployeeViewSet, GenericViewSet, CreateModelMixin):
     def create(self, request, *args, **kwargs):
         bank, company = self.get_queryset()
         base_64_file = request.data.get('base_64_file')
-        services.update_base_64_file(bank=bank, company=company, base_64_file=base_64_file)
+        _update_base_64_file(bank=bank, company=company, base_64_file=base_64_file)
         return Response(data=f'File file.csv has been saved.')
