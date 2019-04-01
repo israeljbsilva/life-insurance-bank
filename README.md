@@ -1,1 +1,1 @@
-# life-insurance-bank
+# life-insurance-core
